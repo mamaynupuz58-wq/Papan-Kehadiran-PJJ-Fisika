@@ -501,61 +501,47 @@
             status.className = 'text-xs mt-1 ' + (isError ? 'text-rose-400' : 'text-slate-400');
         }
 
-        function loadStudentRoster() {
-            if (studentRosterLoaded || studentRosterLoading) return;
-            studentRosterLoading = true;
-            setRosterStatus('Memuat daftar nama dari Google Sheet…');
+        async function loadStudentRoster() {
+    if (studentRosterLoaded || studentRosterLoading) return;
+    studentRosterLoading = true;
+    setRosterStatus('Memuat daftar nama dari Google Sheet…');
 
-            // JSONP dipakai agar halaman HTML dapat meminta data lintas domain.
-            const callbackName = 'receiveStudentRoster_' + Date.now();
-            const script = document.createElement('script');
-            let finished = false;
-            const cleanup = () => {
-                if (script.parentNode) script.parentNode.removeChild(script);
-                try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
-                studentRosterLoading = false;
-            };
-            const timeout = window.setTimeout(() => {
-                if (finished) return;
-                finished = true;
-                cleanup();
-                setRosterStatus('Daftar nama belum berhasil dimuat. Periksa akses Web App dan coba muat ulang halaman.', true);
-                updateStudentDropdown();
-            }, 15000);
+    try {
+        // Menggunakan Fetch API + Cache Buster (?v=) agar browser mengabaikan cache error lama
+        const cacheBusterUrl = STUDENT_API_URL + (STUDENT_API_URL.includes('?') ? '&' : '?') + 'v=' + Date.now();
+        const response = await fetch(cacheBusterUrl);
+        const result = await response.json();
 
-            window[callbackName] = (response) => {
-                if (finished) return;
-                finished = true;
-                window.clearTimeout(timeout);
-                cleanup();
-                if (!response || response.success !== true || !Array.isArray(response.data)) {
-                    setRosterStatus('Format data dari Google Sheet belum sesuai. Periksa kode Apps Script.', true);
-                    return;
+        // Mengambil data dari response (baik format { data: [...] } maupun array langsung)
+        const dataArray = result.data || (Array.isArray(result) ? result : null);
+
+        if (dataArray && Array.isArray(dataArray)) {
+            Object.keys(studentRoster).forEach(k => studentRoster[k] = []);
+            
+            dataArray.forEach(row => {
+                const kelas = String(row.kelas || '').trim();
+                const nama = String(row.nama || '').trim();
+                if (Object.prototype.hasOwnProperty.call(studentRoster, kelas) && nama && !studentRoster[kelas].includes(nama)) {
+                    studentRoster[kelas].push(nama);
                 }
-                Object.keys(studentRoster).forEach(k => studentRoster[k] = []);
-                response.data.forEach(row => {
-                    const kelas = String(row.kelas || '').trim();
-                    const nama = String(row.nama || '').trim();
-                    if (Object.prototype.hasOwnProperty.call(studentRoster, kelas) && nama && !studentRoster[kelas].includes(nama)) {
-                        studentRoster[kelas].push(nama);
-                    }
-                });
-                Object.keys(studentRoster).forEach(k => studentRoster[k].sort((a, b) => a.localeCompare(b, 'id')));
-                studentRosterLoaded = true;
-                const total = Object.values(studentRoster).reduce((sum, names) => sum + names.length, 0);
-                setRosterStatus(total ? `${total} nama murid berhasil dimuat dari Google Sheet.` : 'Koneksi berhasil, tetapi belum ada nama untuk kelas 10 E5–10 E9.', !total);
-                updateStudentDropdown();
-            };
-            script.onerror = () => {
-                if (finished) return;
-                finished = true;
-                window.clearTimeout(timeout);
-                cleanup();
-                setRosterStatus('Tidak dapat mengakses Google Sheet. Periksa izin deployment Web App.', true);
-            };
-            script.src = STUDENT_API_URL + (STUDENT_API_URL.includes('?') ? '&' : '?') + 'callback=' + encodeURIComponent(callbackName) + '&_=' + Date.now();
-            document.head.appendChild(script);
+            });
+
+            Object.keys(studentRoster).forEach(k => studentRoster[k].sort((a, b) => a.localeCompare(b, 'id')));
+            
+            studentRosterLoaded = true;
+            const total = Object.values(studentRoster).reduce((sum, names) => sum + names.length, 0);
+            setRosterStatus(total ? `${total} nama murid berhasil dimuat dari Google Sheet.` : 'Koneksi berhasil, tetapi belum ada nama untuk kelas 10 E5–10 E9.', !total);
+            updateStudentDropdown();
+        } else {
+            setRosterStatus('Format data dari Google Sheet belum sesuai. Periksa kode Apps Script.', true);
         }
+    } catch (err) {
+        console.error('Fetch error:', err);
+        setRosterStatus('Gagal memuat data. Coba muat ulang halaman.', true);
+    } finally {
+        studentRosterLoading = false;
+    }
+}
 
         function updateStudentDropdown(selectedName = "") {
             const className = document.getElementById('classInput').value;
