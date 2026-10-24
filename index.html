@@ -675,24 +675,35 @@
         }
 
         // Database Sync
-        async function loadPostsFromDB() {
-            const tx = db.transaction('posts', 'readonly');
-            const req = tx.objectStore('posts').getAll();
-            req.onsuccess = () => {
-                posts = req.result || [];
-                renderCards();
-            };
-        }
+        // Memuat semua postingan murid dari Google Sheet
+async function loadPostsFromDB() {
+    try {
+        const response = await fetch(STUDENT_API_URL + '?action=getPosts&v=' + Date.now());
+        const result = await response.json();
+        posts = result.data || [];
+        renderCards();
+    } catch (err) {
+        console.error("Gagal memuat data dari Google Sheet:", err);
+    }
+}
 
-        async function savePostToDB(post) {
-            const tx = db.transaction('posts', 'readwrite');
-            tx.objectStore('posts').put(post);
-        }
+// Menyimpan atau memperbarui postingan ke Google Sheet
+async function savePostToDB(post) {
+    try {
+        await fetch(STUDENT_API_URL, {
+            method: 'POST',
+            body: JSON.stringify(post)
+        });
+    } catch (err) {
+        console.error("Gagal mengirim data ke Google Sheet:", err);
+    }
+}
 
         async function deletePostFromDB(id) {
-            const tx = db.transaction('posts', 'readwrite');
-            tx.objectStore('posts').delete(id);
-        }
+    // Data dihapus dari tampilan lokal papan
+    posts = posts.filter(p => p.id !== id);
+    renderCards();
+}
 
         // Render Cards to Board Canvas
         function renderCards() {
