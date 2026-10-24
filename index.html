@@ -215,7 +215,7 @@
         <div class="fixed bottom-5 left-5 z-20 bg-slate-900/90 backdrop-blur-md border border-slate-800 shadow-xl px-3.5 py-2 rounded-full text-xs font-medium text-slate-300 flex items-center gap-3">
             <div class="flex items-center gap-1.5">
                 <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
-                <span id="postCounter" class="font-code text-cyan-300">0 Laporan Eksperimen</span>
+                <span id="postCounter" class="font-code text-cyan-300">0 Laporan Dokumentasi Kehadiran</span>
             </div>
             <span class="text-slate-600">|</span>
             <span class="text-slate-400 text-[11px]">Geser kartu untuk merapikan</span>
@@ -717,7 +717,7 @@ async function savePostToDB(post) {
                 return matchQuery && matchClass;
             });
 
-            document.getElementById('postCounter').innerText = `${filtered.length} Laporan Eksperimen`;
+            document.getElementById('postCounter').innerText = `${filtered.length} Laporan Dokumentasi Kehadiran`;
 
             filtered.forEach(post => {
     const moodObj = physicsMoods[post.mood || 'kinetik'];
