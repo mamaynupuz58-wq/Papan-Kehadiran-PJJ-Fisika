@@ -1,0 +1,1226 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Papan Kehadiran PJJ Fisika</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- HTML2Canvas CDN for Board Export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;600&family=Inter:wght@300;400;500;600;700;800&family=Caveat:wght@600;700&display=swap" rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden;
+            user-select: none;
+            background-color: #0b0f17;
+            color: #f1f5f9;
+        }
+
+        .font-chalk {
+            font-family: 'Caveat', cursive;
+        }
+
+        .font-code {
+            font-family: 'Fira Code', monospace;
+        }
+
+        /* Physics Blackboard & Grid Pattern Background */
+        .bg-physics-board {
+            background-color: #0b0f17;
+            background-image: 
+                linear-gradient(to right, rgba(0, 242, 254, 0.05) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(0, 242, 254, 0.05) 1px, transparent 1px),
+                radial-gradient(circle at 50% 50%, rgba(15, 23, 42, 0.8), #070a0f);
+            background-size: 32px 32px, 32px 32px, 100% 100%;
+        }
+
+        /* Watermark Physics Formulas Overlay */
+        .physics-formulas-watermark {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            opacity: 0.04;
+            font-family: 'Fira Code', monospace;
+            font-size: 28px;
+            color: #00f2fe;
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 120px;
+            padding: 60px;
+            overflow: hidden;
+        }
+
+        /* Neon Glow Effects */
+        .glow-cyan {
+            box-shadow: 0 0 20px rgba(0, 242, 254, 0.25);
+        }
+
+        .glow-yellow {
+            box-shadow: 0 0 20px rgba(250, 204, 21, 0.25);
+        }
+
+        .glow-purple {
+            box-shadow: 0 0 20px rgba(168, 85, 247, 0.25);
+        }
+
+        /* Lab Polaroid Card Styles */
+        .lab-card {
+            background: rgba(18, 24, 38, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .lab-card:hover {
+            box-shadow: 0 12px 30px -5px rgba(0, 242, 254, 0.3);
+        }
+
+        /* Physics Sticky Tape Effect */
+        .sticky-tape {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%) rotate(-1deg);
+            width: 90px;
+            height: 24px;
+            background: rgba(254, 240, 138, 0.35);
+            backdrop-filter: blur(4px);
+            border: 1px dashed rgba(250, 204, 21, 0.5);
+            z-index: 10;
+        }
+
+        /* Custom Physics Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #090d14;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #1e293b;
+            border-radius: 999px;
+            border: 1px solid rgba(0, 242, 254, 0.2);
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #00f2fe;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen flex flex-col bg-slate-950 text-slate-100 overflow-hidden">
+
+    <!-- Header / Navbar Navigation -->
+    <header class="h-16 border-b border-slate-800/80 bg-slate-900/90 backdrop-blur-xl px-4 flex items-center justify-between z-30 shrink-0 shadow-lg shadow-cyan-950/20">
+        <div class="flex items-center gap-3">
+            <div class="p-2.5 bg-gradient-to-tr from-cyan-600 via-indigo-600 to-purple-600 rounded-xl text-white shadow-lg shadow-cyan-500/20 flex items-center justify-center">
+                <i data-lucide="atom" class="w-6 h-6 animate-spin-slow"></i>
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <h1 class="font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-teal-300 to-yellow-300 text-base sm:text-lg tracking-wide">
+                        Papan Kehadiran PJJ Fisika
+                    </h1>
+                    <span class="text-[10px] font-code px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800/60 hidden sm:inline-block">
+                        Lab v2.5
+                    </span>
+                </div>
+                <p class="text-xs text-slate-400 hidden sm:block">Kehadiran dan dokumentasi pembelajaran Fisika Jarak Jauh</p>
+            </div>
+        </div>
+
+        <!-- Toolbar Actions & Filters -->
+        <div class="flex items-center gap-2">
+            <!-- Search Filter -->
+            <div class="relative hidden lg:block w-48">
+                <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+                <input type="text" id="searchInput" oninput="handleSearch(this.value)" placeholder="Cari nama / materi..." 
+                    class="w-full pl-8 pr-3 py-1.5 text-xs bg-slate-900/80 border border-slate-700/70 rounded-lg text-slate-200 placeholder-slate-500 focus:border-cyan-400 focus:outline-none focus:ring-1 focus:ring-cyan-400">
+            </div>
+
+            <!-- Class Filter Dropdown -->
+            <select id="classFilter" onchange="handleClassFilter(this.value)" class="text-xs bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-300 font-medium focus:border-cyan-400 focus:outline-none cursor-pointer">
+                <option value="ALL">Semua Kelas</option>
+                <option value="10 E5">10 E5</option>
+                <option value="10 E6">10 E6</option>
+                <option value="10 E7">10 E7</option>
+                <option value="10 E8">10 E8</option>
+                <option value="10 E9">10 E9</option>
+            </select>
+
+            <!-- Guide Button (Prominent) -->
+            <button onclick="openGuideModal()" class="flex items-center gap-1.5 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 px-3 py-1.5 rounded-lg text-xs font-semibold transition active:scale-95 shadow-sm">
+                <i data-lucide="book-open" class="w-4 h-4 text-amber-400"></i>
+                <span class="hidden sm:inline">Cara Mengisi</span>
+            </button>
+
+            <!-- Options / Export Menu -->
+            <div class="relative">
+                <button onclick="toggleMenu()" class="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg border border-slate-800 transition">
+                    <i data-lucide="more-vertical" class="w-4 h-4"></i>
+                </button>
+                <div id="dropdownMenu" class="hidden absolute right-0 top-11 w-52 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 py-1.5 text-xs text-slate-300">
+                    <button onclick="downloadBoardPNG()" class="w-full px-4 py-2 text-left hover:bg-slate-800 flex items-center gap-2">
+                        <i data-lucide="download" class="w-4 h-4 text-emerald-400"></i> Unduh Gambar Papan
+                    </button>
+                    <button onclick="exportJSON()" class="w-full px-4 py-2 text-left hover:bg-slate-800 flex items-center gap-2">
+                        <i data-lucide="file-output" class="w-4 h-4 text-cyan-400"></i> Ekspor Data (JSON)
+                    </button>
+                    <label class="w-full px-4 py-2 text-left hover:bg-slate-800 flex items-center gap-2 cursor-pointer">
+                        <i data-lucide="file-input" class="w-4 h-4 text-purple-400"></i> Impor Data (JSON)
+                        <input type="file" id="importInput" accept=".json" onchange="importJSON(event)" class="hidden">
+                    </label>
+                    <hr class="my-1 border-slate-800">
+                    <button onclick="confirmResetAll()" class="w-full px-4 py-2 text-left hover:bg-rose-950/40 text-rose-400 flex items-center gap-2">
+                        <i data-lucide="trash-2" class="w-4 h-4"></i> Hapus Semua Laporan
+                    </button>
+                </div>
+            </div>
+
+            <!-- Add Post Primary Button -->
+            <button onclick="openPostModal()" class="flex items-center gap-1.5 bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold px-3.5 py-1.5 rounded-lg text-xs shadow-lg shadow-cyan-500/25 transition active:scale-95">
+                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                <span>+ Upload Foto</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- Canvas Workspace Area -->
+    <main id="boardCanvas" class="flex-1 relative overflow-auto bg-physics-board p-6 transition-colors duration-300">
+        
+        <!-- Watermark Formulas -->
+        <div class="physics-formulas-watermark">
+            <div>E = mc²</div>
+            <div>F = m · a</div>
+            <div>V = I · R</div>
+            <div>λ = h / p</div>
+            <div>PV = nRT</div>
+            <div>∇ × B = μ₀J</div>
+            <div>p = m · v</div>
+            <div>E_k = ½ mv²</div>
+            <div>F_g = G(m₁m₂)/r²</div>
+            <div>T = 2π√(l/g)</div>
+            <div>ω = 2πf</div>
+            <div>E = hf</div>
+        </div>
+
+        <!-- Status & Stats Badge Floating -->
+        <div class="fixed bottom-5 left-5 z-20 bg-slate-900/90 backdrop-blur-md border border-slate-800 shadow-xl px-3.5 py-2 rounded-full text-xs font-medium text-slate-300 flex items-center gap-3">
+            <div class="flex items-center gap-1.5">
+                <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
+                <span id="postCounter" class="font-code text-cyan-300">0 Laporan Eksperimen</span>
+            </div>
+            <span class="text-slate-600">|</span>
+            <span class="text-slate-400 text-[11px]">Geser kartu untuk merapikan</span>
+        </div>
+
+        <!-- Pannable / Infinite Canvas Board Area -->
+        <div id="cardsArea" class="relative w-[3400px] h-[2200px] min-h-full">
+            <!-- Dynamic Cards Rendered Here -->
+        </div>
+    </main>
+
+    <!-- Modal 1: Cara Mengisi Papan (Interactive Help Guide) -->
+    <div id="guideModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 rounded-2xl max-w-lg w-full border border-slate-800 shadow-2xl overflow-hidden flex flex-col">
+            <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/50">
+                <div class="flex items-center gap-2">
+                    <div class="p-1.5 bg-amber-500/20 text-amber-400 rounded-lg">
+                        <i data-lucide="book-open" class="w-5 h-5"></i>
+                    </div>
+                    <h3 class="font-bold text-slate-100 text-sm">Panduan Papan Kehadiran PJJ Fisika</h3>
+                </div>
+                <button onclick="closeGuideModal()" class="text-slate-400 hover:text-slate-200">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div class="p-6 overflow-y-auto space-y-4 text-xs text-slate-300">
+                <div class="bg-cyan-950/30 border border-cyan-800/40 p-3 rounded-xl flex items-start gap-3">
+                    <div class="w-6 h-6 rounded-full bg-cyan-500/20 text-cyan-400 flex items-center justify-center shrink-0 font-bold">1</div>
+                    <div>
+                        <h4 class="font-bold text-cyan-300">Klik "+ Upload Foto"</h4>
+                        <p class="text-slate-400 mt-0.5">Tombol berada di pojok kanan atas navigasi utama.</p>
+                    </div>
+                </div>
+
+                <div class="bg-purple-950/30 border border-purple-800/40 p-3 rounded-xl flex items-start gap-3">
+                    <div class="w-6 h-6 rounded-full bg-purple-500/20 text-purple-400 flex items-center justify-center shrink-0 font-bold">2</div>
+                    <div>
+                        <h4 class="font-bold text-purple-300">Upload Foto Kegiatan Fisika</h4>
+                        <p class="text-slate-400 mt-0.5">Unggah foto kamu saat belajar/eksperimen dari HP atau Laptop. **Ukuran foto bebas!** Sistem akan mengompres foto secara otomatis agar ringan.</p>
+                    </div>
+                </div>
+
+                <div class="bg-amber-950/30 border border-amber-800/40 p-3 rounded-xl flex items-start gap-3">
+                    <div class="w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 flex items-center justify-center shrink-0 font-bold">3</div>
+                    <div>
+                        <h4 class="font-bold text-amber-300">Pilih Physics Mood & Stiker Badge</h4>
+                        <p class="text-slate-400 mt-0.5">Pilih tingkat energi kamu hari ini (contoh: ⚡ *Energi Kinetik Tinggi* atau 😴 *Gaya Gravitasi Kuat*), serta stiker topik fisika yang relevan.</p>
+                    </div>
+                </div>
+
+                <div class="bg-emerald-950/30 border border-emerald-800/40 p-3 rounded-xl flex items-start gap-3">
+                    <div class="w-6 h-6 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0 font-bold">4</div>
+                    <div>
+                        <h4 class="font-bold text-emerald-300">Tempelkan & Atur Posisi</h4>
+                        <p class="text-slate-400 mt-0.5">Klik **Simpan**. Kartumu akan tertempel di papan. Kamu bisa **menggeser (drag)** posisi kartu ke mana saja!</p>
+                    </div>
+                </div>
+
+                <div class="bg-rose-950/30 border border-rose-800/40 p-3 rounded-xl flex items-start gap-3">
+                    <div class="w-6 h-6 rounded-full bg-rose-500/20 text-rose-400 flex items-center justify-center shrink-0 font-bold">5</div>
+                    <div>
+                        <h4 class="font-bold text-rose-300">Beri Reaksi & Komentar Teman</h4>
+                        <p class="text-slate-400 mt-0.5">Beri dukungan ke teman kelasmu dengan menekan tombol **⚡ Volt**, **⚛️ Quantum Spark**, atau beri komentar apresiasi!</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="px-6 py-3 border-t border-slate-800 bg-slate-900/80 flex justify-end">
+                <button onclick="closeGuideModal()" class="px-4 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white rounded-lg text-xs font-medium">Saya Mengerti!</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal 2: Form Tambah / Edit Laporan Post -->
+    <div id="postModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 rounded-2xl max-w-lg w-full border border-slate-800 shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
+            <div class="px-6 py-4 border-b border-slate-800 flex justify-between items-center bg-slate-900/80">
+                <h3 id="modalTitle" class="font-bold text-slate-100 text-sm flex items-center gap-2">
+                    <i data-lucide="flask-conical" class="w-4 h-4 text-cyan-400"></i> Upload Foto Kehadiran PJJ
+                </h3>
+                <button onclick="closePostModal()" class="text-slate-400 hover:text-slate-200">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <form id="postForm" onsubmit="savePost(event)" class="p-6 overflow-y-auto space-y-4 text-xs">
+                <input type="hidden" id="postId">
+
+                <!-- Dropzone Upload Foto -->
+                <div>
+                    <label class="block font-semibold text-slate-300 mb-1">Upload Foto *</label>
+                    <div id="dropzone" onclick="document.getElementById('imageInput').click()" 
+                        class="border-2 border-dashed border-slate-700 hover:border-cyan-500/80 rounded-xl p-4 text-center cursor-pointer bg-slate-950/50 transition group">
+                        <input type="file" id="imageInput" accept="image/*" onchange="handleImageSelect(event)" class="hidden">
+                        
+                        <div id="uploadPlaceholder" class="space-y-1.5 py-2">
+                            <i data-lucide="upload-cloud" class="w-8 h-8 text-cyan-400 mx-auto group-hover:scale-110 transition"></i>
+                            <p class="font-medium text-slate-300">Upload Foto: pilih atau geser foto ke sini</p>
+                            <p class="text-[10px] text-slate-500">Ukuran foto bebas (Otomatis dikompres & dioptimalkan)</p>
+                        </div>
+
+                        <div id="imagePreviewContainer" class="hidden relative rounded-lg overflow-hidden max-h-52 bg-black/40">
+                            <img id="imagePreview" src="" alt="Pratinjau" class="w-full h-52 object-cover rounded-lg">
+                            <button type="button" onclick="removeImage(event)" class="absolute top-2 right-2 bg-rose-600/90 hover:bg-rose-600 text-white p-1.5 rounded-full shadow-lg">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                            <div id="compressingBadge" class="absolute bottom-2 left-2 bg-slate-900/90 border border-cyan-500/50 text-cyan-300 px-2 py-1 rounded text-[10px] flex items-center gap-1">
+                                <i data-lucide="zap" class="w-3 h-3 text-yellow-400"></i> Foto Terkompresi
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Input Nama & Kelas -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">Kelas *</label>
+                        <select id="classInput" required onchange="updateStudentDropdown()" class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-slate-200 focus:border-cyan-400 focus:outline-none">
+                            <option value="">-- Pilih Kelas --</option>
+                            <option value="10 E5">10 E5</option>
+                            <option value="10 E6">10 E6</option>
+                            <option value="10 E7">10 E7</option>
+                            <option value="10 E8">10 E8</option>
+                            <option value="10 E9">10 E9</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-slate-300 mb-1">Nama Murid *</label>
+                        <select id="authorInput" required class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-slate-200 focus:border-cyan-400 focus:outline-none">
+                            <option value="">-- Pilih kelas terlebih dahulu --</option>
+                        </select>
+                    </div>
+                </div>
+                <p id="studentRosterStatus" class="text-xs mt-1 text-slate-400" role="status">Daftar nama akan dimuat dari Google Sheet.</p>
+
+                <!-- Physics Mood Check-In -->
+                <div>
+                    <label class="block font-semibold text-slate-300 mb-1.5">Perasaan Hari Ini (Physics Mood) *</label>
+                    <div class="space-y-1.5">
+                        <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-950 border border-slate-800 hover:border-amber-500/50 cursor-pointer text-slate-300">
+                            <input type="radio" name="physicsMood" value="kinetik" checked class="text-amber-500 focus:ring-0">
+                            <span>⚡ <b>Energi Kinetik Tinggi</b> (Sangat Semangat / High Kinetic)</span>
+                        </label>
+                        <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-950 border border-slate-800 hover:border-emerald-500/50 cursor-pointer text-slate-300">
+                            <input type="radio" name="physicsMood" value="potensial" class="text-emerald-500 focus:ring-0">
+                            <span>🔋 <b>Potensial Maksimal</b> (Fokus & Siap Belajar)</span>
+                        </label>
+                        <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-950 border border-slate-800 hover:border-sky-500/50 cursor-pointer text-slate-300">
+                            <input type="radio" name="physicsMood" value="termal" class="text-sky-500 focus:ring-0">
+                            <span>☕ <b>Keseimbangan Termal</b> (Santai & Stabil)</span>
+                        </label>
+                        <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-950 border border-slate-800 hover:border-purple-500/50 cursor-pointer text-slate-300">
+                            <input type="radio" name="physicsMood" value="resonansi" class="text-purple-500 focus:ring-0">
+                            <span>🌊 <b>Resonansi Gelombang</b> (Kreatif & Terinspirasi)</span>
+                        </label>
+                        <label class="flex items-center gap-2 p-2 rounded-lg bg-slate-950 border border-slate-800 hover:border-rose-500/50 cursor-pointer text-slate-300">
+                            <input type="radio" name="physicsMood" value="gravitasi" class="text-rose-500 focus:ring-0">
+                            <span>😴 <b>Gaya Gravitasi Kuat</b> (Ngantuk / Berat)</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Physics Badge Stiker -->
+                <div>
+                    <label class="block font-semibold text-slate-300 mb-1.5">Lencana / Stiker Fisika</label>
+                    <div class="grid grid-cols-3 gap-2" id="badgePicker">
+                        <label class="cursor-pointer">
+                            <input type="radio" name="badge" value="⚛️ Quantum" checked class="peer hidden">
+                            <span class="block p-2 text-center rounded-lg bg-slate-950 border border-slate-800 peer-checked:border-cyan-400 peer-checked:bg-cyan-950/40 text-slate-300">⚛️ Quantum</span>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="badge" value="🍎 Mekanika" class="peer hidden">
+                            <span class="block p-2 text-center rounded-lg bg-slate-950 border border-slate-800 peer-checked:border-amber-400 peer-checked:bg-amber-950/40 text-slate-300">🍎 Mekanika</span>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="badge" value="⚡ Listrik" class="peer hidden">
+                            <span class="block p-2 text-center rounded-lg bg-slate-950 border border-slate-800 peer-checked:border-yellow-400 peer-checked:bg-yellow-950/40 text-slate-300">⚡ Listrik</span>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="badge" value="🔭 Astronomi" class="peer hidden">
+                            <span class="block p-2 text-center rounded-lg bg-slate-950 border border-slate-800 peer-checked:border-indigo-400 peer-checked:bg-indigo-950/40 text-slate-300">🔭 Astronomi</span>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="badge" value="🔬 Lab Hero" class="peer hidden">
+                            <span class="block p-2 text-center rounded-lg bg-slate-950 border border-slate-800 peer-checked:border-emerald-400 peer-checked:bg-emerald-950/40 text-slate-300">🔬 Lab Hero</span>
+                        </label>
+                        <label class="cursor-pointer">
+                            <input type="radio" name="badge" value="🌊 Gelombang" class="peer hidden">
+                            <span class="block p-2 text-center rounded-lg bg-slate-950 border border-slate-800 peer-checked:border-purple-400 peer-checked:bg-purple-950/40 text-slate-300">🌊 Gelombang</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Deskripsi Kegiatan -->
+                <div>
+                    <label class="block font-semibold text-slate-300 mb-1">Kode Foto dari Google Classroom *</label>
+                    <textarea id="descInput" required rows="3" placeholder="Masukkan kode foto yang ada di Google Classroom..." 
+                        class="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-lg text-slate-200 focus:border-cyan-400 focus:outline-none resize-none"></textarea>
+                </div>
+
+                <div class="pt-2 flex justify-end gap-2 border-t border-slate-800">
+                    <button type="button" onclick="closePostModal()" class="px-4 py-2 text-slate-400 hover:bg-slate-800 rounded-lg">Batal</button>
+                    <button type="submit" class="px-5 py-2 bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-semibold rounded-lg shadow-lg shadow-cyan-500/20">Tempel ke Papan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 3: Lightbox Foto Ukuran Penuh -->
+    <div id="lightboxModal" class="fixed inset-0 bg-black/90 z-50 flex items-center justify-center p-4 hidden" onclick="closeLightbox()">
+        <button onclick="closeLightbox()" class="absolute top-4 right-4 text-white bg-slate-800/80 p-2 rounded-full">
+            <i data-lucide="x" class="w-6 h-6"></i>
+        </button>
+        <img id="lightboxImg" src="" alt="Foto Penuh" class="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl border border-slate-700" onclick="event.stopPropagation()">
+    </div>
+
+    <!-- Modal 4: Komentar Teman -->
+    <div id="commentModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 rounded-2xl max-w-md w-full border border-slate-800 shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+            <div class="px-5 py-3.5 border-b border-slate-800 flex justify-between items-center bg-slate-900">
+                <h3 class="font-bold text-slate-100 text-xs flex items-center gap-2">
+                    <i data-lucide="message-square" class="w-4 h-4 text-cyan-400"></i> Diskusi & Apresiasi Eksperimen
+                </h3>
+                <button onclick="closeCommentModal()" class="text-slate-400 hover:text-slate-200">
+                    <i data-lucide="x" class="w-5 h-5"></i>
+                </button>
+            </div>
+
+            <div id="commentsList" class="p-4 overflow-y-auto flex-1 space-y-2.5 text-xs bg-slate-950/40">
+                <!-- Comments dynamic -->
+            </div>
+
+            <form onsubmit="saveComment(event)" class="p-3 border-t border-slate-800 bg-slate-900 flex items-center gap-2">
+                <input type="hidden" id="commentPostId">
+                <input type="text" id="commentAuthor" required placeholder="Nama Anda..." 
+                    class="w-1/3 px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-200 focus:border-cyan-400 focus:outline-none">
+                <input type="text" id="commentText" required placeholder="Tulis komentar..." 
+                    class="flex-1 px-3 py-1.5 bg-slate-950 border border-slate-700 rounded-lg text-xs text-slate-200 focus:border-cyan-400 focus:outline-none">
+                <button type="submit" class="p-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-lg shadow">
+                    <i data-lucide="send" class="w-4 h-4"></i>
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal 5: Custom Dialog Alert/Confirm -->
+    <div id="dialogModal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 rounded-2xl max-w-sm w-full p-6 text-center space-y-4 border border-slate-800 shadow-2xl">
+            <div id="dialogIcon" class="w-12 h-12 rounded-full mx-auto flex items-center justify-center bg-amber-500/20 text-amber-400">
+                <i data-lucide="alert-triangle" class="w-6 h-6"></i>
+            </div>
+            <div>
+                <h4 id="dialogTitle" class="font-bold text-slate-100 text-base">Konfirmasi</h4>
+                <p id="dialogMessage" class="text-xs text-slate-400 mt-1">Apakah Anda yakin?</p>
+            </div>
+            <div class="flex justify-center gap-2 pt-2" id="dialogButtons"></div>
+        </div>
+    </div>
+
+    <!-- JavaScript Application Logic -->
+    <script>
+        let posts = [];
+        let db;
+        let currentCompressedImage = '';
+        let draggingCard = null;
+        let zIndexCounter = 20;
+        let searchQuery = '';
+        let selectedClassFilter = 'ALL';
+
+        // Sumber daftar nama murid dari Google Sheets melalui Google Apps Script Web App.
+        const STUDENT_API_URL = 'https://script.google.com/macros/s/AKfycby7IXyrH474xcahXfUBJPbd2dJSnX2UKIpWfbuduzqx0bvmUChUW33GqLgq0-e_mSdu7A/exec';
+        const studentRoster = {
+            "10 E5": [], "10 E6": [], "10 E7": [], "10 E8": [], "10 E9": []
+        };
+        let studentRosterLoaded = false;
+        let studentRosterLoading = false;
+
+        function setRosterStatus(message, isError = false) {
+            const status = document.getElementById('studentRosterStatus');
+            if (!status) return;
+            status.textContent = message;
+            status.className = 'text-xs mt-1 ' + (isError ? 'text-rose-400' : 'text-slate-400');
+        }
+
+        function loadStudentRoster() {
+            if (studentRosterLoaded || studentRosterLoading) return;
+            studentRosterLoading = true;
+            setRosterStatus('Memuat daftar nama dari Google Sheet…');
+
+            // JSONP dipakai agar halaman HTML dapat meminta data lintas domain.
+            const callbackName = 'receiveStudentRoster_' + Date.now();
+            const script = document.createElement('script');
+            let finished = false;
+            const cleanup = () => {
+                if (script.parentNode) script.parentNode.removeChild(script);
+                try { delete window[callbackName]; } catch (_) { window[callbackName] = undefined; }
+                studentRosterLoading = false;
+            };
+            const timeout = window.setTimeout(() => {
+                if (finished) return;
+                finished = true;
+                cleanup();
+                setRosterStatus('Daftar nama belum berhasil dimuat. Periksa akses Web App dan coba muat ulang halaman.', true);
+                updateStudentDropdown();
+            }, 15000);
+
+            window[callbackName] = (response) => {
+                if (finished) return;
+                finished = true;
+                window.clearTimeout(timeout);
+                cleanup();
+                if (!response || response.success !== true || !Array.isArray(response.data)) {
+                    setRosterStatus('Format data dari Google Sheet belum sesuai. Periksa kode Apps Script.', true);
+                    return;
+                }
+                Object.keys(studentRoster).forEach(k => studentRoster[k] = []);
+                response.data.forEach(row => {
+                    const kelas = String(row.kelas || '').trim();
+                    const nama = String(row.nama || '').trim();
+                    if (Object.prototype.hasOwnProperty.call(studentRoster, kelas) && nama && !studentRoster[kelas].includes(nama)) {
+                        studentRoster[kelas].push(nama);
+                    }
+                });
+                Object.keys(studentRoster).forEach(k => studentRoster[k].sort((a, b) => a.localeCompare(b, 'id')));
+                studentRosterLoaded = true;
+                const total = Object.values(studentRoster).reduce((sum, names) => sum + names.length, 0);
+                setRosterStatus(total ? `${total} nama murid berhasil dimuat dari Google Sheet.` : 'Koneksi berhasil, tetapi belum ada nama untuk kelas 10 E5–10 E9.', !total);
+                updateStudentDropdown();
+            };
+            script.onerror = () => {
+                if (finished) return;
+                finished = true;
+                window.clearTimeout(timeout);
+                cleanup();
+                setRosterStatus('Tidak dapat mengakses Google Sheet. Periksa izin deployment Web App.', true);
+            };
+            script.src = STUDENT_API_URL + (STUDENT_API_URL.includes('?') ? '&' : '?') + 'callback=' + encodeURIComponent(callbackName) + '&_=' + Date.now();
+            document.head.appendChild(script);
+        }
+
+        function updateStudentDropdown(selectedName = "") {
+            const className = document.getElementById('classInput').value;
+            const select = document.getElementById('authorInput');
+            select.innerHTML = '<option value="">-- Pilih Nama Murid --</option>';
+            (studentRoster[className] || []).forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = name;
+                select.appendChild(option);
+            });
+            if (!className) {
+                select.innerHTML = '<option value="">-- Pilih kelas terlebih dahulu --</option>';
+            } else if (!(studentRoster[className] || []).length) {
+                select.innerHTML = `<option value="">${studentRosterLoaded ? 'Nama kelas belum tersedia di Google Sheet' : 'Memuat daftar nama…'}</option>`;
+            }
+            if (selectedName) select.value = selectedName;
+        }
+
+        // Physics Mood Configurations
+        const physicsMoods = {
+            kinetik: { label: '⚡ Energi Kinetik Tinggi', badge: 'High Ek', class: 'border-amber-400/60 bg-amber-950/30 text-amber-300' },
+            potensial: { label: '🔋 Potensial Maksimal', badge: 'High Ep', class: 'border-emerald-400/60 bg-emerald-950/30 text-emerald-300' },
+            termal: { label: '☕ Keseimbangan Termal', badge: 'Thermal Eq', class: 'border-sky-400/60 bg-sky-950/30 text-sky-300' },
+            resonansi: { label: '🌊 Resonansi Gelombang', badge: 'Resonance', class: 'border-purple-400/60 bg-purple-950/30 text-purple-300' },
+            gravitasi: { label: '😴 Gaya Gravitasi Kuat', badge: 'High Gravity', class: 'border-rose-400/60 bg-rose-950/30 text-rose-300' }
+        };
+
+        // Initialize IndexedDB
+        function initDB() {
+            return new Promise((resolve, reject) => {
+                const request = indexedDB.open('PhysicsPJJDB', 1);
+                request.onupgradeneeded = (e) => {
+                    const db = e.target.result;
+                    if (!db.objectStoreNames.contains('posts')) {
+                        db.createObjectStore('posts', { keyPath: 'id' });
+                    }
+                };
+                request.onsuccess = (e) => {
+                    db = e.target.result;
+                    resolve(db);
+                };
+                request.onerror = (e) => reject(e);
+            });
+        }
+
+        window.onload = async function() {
+            lucide.createIcons();
+            loadStudentRoster();
+            try {
+                await initDB();
+                await loadPostsFromDB();
+                // Papan dimulai kosong agar hanya menampilkan unggahan murid yang sebenarnya.
+            } catch (err) {
+                console.error("Database initialization error:", err);
+            }
+            setupDropzone();
+        };
+
+        // Preload Demo Sample Cards
+        async function preloadSamplePosts() {
+            const demoPosts = [
+                {
+                    id: 'post-demo-1',
+                    author: 'Budi Santoso',
+                    className: 'XI MIPA 2',
+                    mood: 'kinetik',
+                    badge: '🍎 Mekanika',
+                    desc: 'Eksperimen ayunan sederhana pendulum menggunakan tali & kelereng untuk menghitung percepatan gravitasi bumi.',
+                    image: createSampleSvgDataUrl('Pendulum & Gravitasi', '#00f2fe'),
+                    volts: 12,
+                    sparks: 5,
+                    forces: 8,
+                    comments: [{ author: 'Siti', text: 'Keren banget pendulumnnya!', time: new Date().toISOString() }],
+                    x: 80,
+                    y: 70,
+                    zIndex: 10,
+                    tilt: -2
+                },
+                {
+                    id: 'post-demo-2',
+                    author: 'Siti Rahmawati',
+                    className: 'XII IPA 1',
+                    mood: 'resonansi',
+                    badge: '⚛️ Quantum',
+                    desc: 'Pengamatan gelombang pembiasan cahaya pada prisma kaca (Dispersi Cahaya pelangi).',
+                    image: createSampleSvgDataUrl('Pembiasan Prisma', '#a855f7'),
+                    volts: 18,
+                    sparks: 14,
+                    forces: 6,
+                    comments: [],
+                    x: 420,
+                    y: 110,
+                    zIndex: 11,
+                    tilt: 1.5
+                },
+                {
+                    id: 'post-demo-3',
+                    author: 'Ahmad Fauzi',
+                    className: 'X IPA 1',
+                    mood: 'potensial',
+                    badge: '⚡ Listrik',
+                    desc: 'Membuat rangkaian listrik seri & paralel sederhana dengan baterai 9V dan lampu LED.',
+                    image: createSampleSvgDataUrl('Rangkaian LED', '#facc15'),
+                    volts: 9,
+                    sparks: 4,
+                    forces: 10,
+                    comments: [],
+                    x: 760,
+                    y: 80,
+                    zIndex: 12,
+                    tilt: -1
+                }
+            ];
+
+            for (let p of demoPosts) {
+                await savePostToDB(p);
+            }
+            await loadPostsFromDB();
+        }
+
+        function createSampleSvgDataUrl(text, color) {
+            const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="600" height="400" viewBox="0 0 600 400">
+                <rect width="600" height="400" fill="#090d14"/>
+                <circle cx="300" cy="200" r="120" stroke="${color}" stroke-width="3" fill="none" opacity="0.3"/>
+                <circle cx="300" cy="200" r="60" stroke="${color}" stroke-width="2" fill="none" opacity="0.5"/>
+                <text x="50%" y="48%" dominant-baseline="middle" text-anchor="middle" fill="#ffffff" font-family="sans-serif" font-size="24" font-weight="bold">${text}</text>
+                <text x="50%" y="58%" dominant-baseline="middle" text-anchor="middle" fill="${color}" font-family="monospace" font-size="14">LAB FISIKA PJJ OKTOBER 2026</text>
+            </svg>`;
+            return 'data:image/svg+xml;base64,' + btoa(svg);
+        }
+
+        // Database Sync
+        async function loadPostsFromDB() {
+            const tx = db.transaction('posts', 'readonly');
+            const req = tx.objectStore('posts').getAll();
+            req.onsuccess = () => {
+                posts = req.result || [];
+                renderCards();
+            };
+        }
+
+        async function savePostToDB(post) {
+            const tx = db.transaction('posts', 'readwrite');
+            tx.objectStore('posts').put(post);
+        }
+
+        async function deletePostFromDB(id) {
+            const tx = db.transaction('posts', 'readwrite');
+            tx.objectStore('posts').delete(id);
+        }
+
+        // Render Cards to Board Canvas
+        function renderCards() {
+            const container = document.getElementById('cardsArea');
+            container.innerHTML = '';
+
+            const filtered = posts.filter(p => {
+                const term = searchQuery.toLowerCase();
+                const matchQuery = p.author.toLowerCase().includes(term) || p.desc.toLowerCase().includes(term) || p.className.toLowerCase().includes(term);
+                const matchClass = selectedClassFilter === 'ALL' || p.className === selectedClassFilter;
+                return matchQuery && matchClass;
+            });
+
+            document.getElementById('postCounter').innerText = `${filtered.length} Laporan Eksperimen`;
+
+            filtered.forEach(post => {
+                const moodObj = physicsMoods[post.mood || 'kinetik'];
+                const card = document.createElement('div');
+                card.id = `card-${post.id}`;
+                card.className = `lab-card absolute w-80 rounded-2xl p-4 text-xs flex flex-col space-y-3 cursor-grab active:cursor-grabbing select-none group`;
+                card.style.left = `${post.x || 50}px`;
+                card.style.top = `${post.y || 50}px`;
+                card.style.zIndex = post.zIndex || 1;
+                card.style.transform = `rotate(${post.tilt || 0}deg)`;
+
+                card.innerHTML = `
+                    <div class="sticky-tape"></div>
+
+                    <!-- Header -->
+                    <div class="card-handle flex justify-between items-start pt-1">
+                        <div>
+                            <div class="flex items-center gap-1.5">
+                                <h3 class="font-extrabold text-slate-100 text-sm tracking-wide">${escapeHtml(post.author)}</h3>
+                            </div>
+                            <div class="flex items-center gap-1.5 mt-1">
+                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-cyan-300 border border-slate-700">
+                                    ${escapeHtml(post.className)}
+                                </span>
+                                <span class="px-2 py-0.5 rounded text-[10px] font-medium border ${moodObj.class}">
+                                    ${moodObj.label}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-1 opacity-70 group-hover:opacity-100 transition">
+                            <button onclick="openPostModal('${post.id}')" class="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-cyan-400">
+                                <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                            </button>
+                            <button onclick="confirmDeletePost('${post.id}')" class="p-1 hover:bg-rose-900/50 rounded text-slate-400 hover:text-rose-400">
+                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Image Section -->
+                    ${post.image ? `
+                        <div class="relative overflow-hidden rounded-xl bg-slate-950 border border-slate-800 group/img">
+                            <img src="${post.image}" alt="Laporan Foto" class="w-full h-48 object-cover rounded-xl transition duration-300 group-hover/img:scale-105">
+                            <button onclick="openLightbox('${post.image}')" class="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 flex items-center justify-center text-white transition">
+                                <i data-lucide="maximize-2" class="w-6 h-6 text-cyan-400"></i>
+                            </button>
+                            <span class="absolute bottom-2 right-2 bg-slate-900/80 backdrop-blur-sm border border-slate-700 text-slate-300 px-2 py-0.5 rounded-full text-[10px] font-code">
+                                ${post.badge || '⚛️ Fisika'}
+                            </span>
+                        </div>
+                    ` : ''}
+
+                    <!-- Experiment Notes -->
+                    <p class="text-slate-300 leading-relaxed font-chalk text-base break-words">
+                        "${escapeHtml(post.desc)}"
+                    </p>
+
+                    <!-- Interactive Reactions Bar -->
+                    <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+                        <div class="flex items-center gap-2">
+                            <button onclick="addReaction('${post.id}', 'volts')" class="flex items-center gap-1 hover:text-yellow-400 transition bg-slate-900 px-2 py-1 rounded-lg border border-slate-800">
+                                <span>⚡</span> <span class="font-bold text-slate-200">${post.volts || 0}</span>
+                            </button>
+                            <button onclick="addReaction('${post.id}', 'sparks')" class="flex items-center gap-1 hover:text-cyan-400 transition bg-slate-900 px-2 py-1 rounded-lg border border-slate-800">
+                                <span>⚛️</span> <span class="font-bold text-slate-200">${post.sparks || 0}</span>
+                            </button>
+                            <button onclick="addReaction('${post.id}', 'forces')" class="flex items-center gap-1 hover:text-purple-400 transition bg-slate-900 px-2 py-1 rounded-lg border border-slate-800">
+                                <span>💪</span> <span class="font-bold text-slate-200">${post.forces || 0}</span>
+                            </button>
+                        </div>
+                        <button onclick="openCommentModal('${post.id}')" class="flex items-center gap-1 hover:text-cyan-400 transition bg-slate-900 px-2 py-1 rounded-lg border border-slate-800">
+                            <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
+                            <span>${(post.comments || []).length}</span>
+                        </button>
+                    </div>
+                `;
+
+                attachCardDrag(card, post.id);
+                container.appendChild(card);
+            });
+
+            lucide.createIcons();
+        }
+
+        // Client-side HTML5 Canvas Image Compression (Zero size limits, maximum efficiency)
+        function compressImage(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.readAsDataURL(file);
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.src = e.target.result;
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        let width = img.width;
+                        let height = img.height;
+                        const maxDimension = 1000;
+
+                        if (width > maxDimension || height > maxDimension) {
+                            if (width > height) {
+                                height = Math.round((height * maxDimension) / width);
+                                width = maxDimension;
+                            } else {
+                                width = Math.round((width * maxDimension) / height);
+                                height = maxDimension;
+                            }
+                        }
+
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+
+                        // Compress to JPEG with 0.78 quality
+                        resolve(canvas.toDataURL('image/jpeg', 0.78));
+                    };
+                    img.onerror = (err) => reject(err);
+                };
+            });
+        }
+
+        // Image Selection Handler
+        async function handleImageSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            document.getElementById('uploadPlaceholder').innerHTML = `
+                <i data-lucide="loader-2" class="w-8 h-8 text-cyan-400 mx-auto animate-spin"></i>
+                <p class="font-medium text-slate-300">Mengompres & Mengoptimalkan Foto...</p>
+            `;
+            lucide.createIcons();
+
+            try {
+                currentCompressedImage = await compressImage(file);
+                document.getElementById('imagePreview').src = currentCompressedImage;
+                document.getElementById('imagePreviewContainer').classList.remove('hidden');
+                document.getElementById('uploadPlaceholder').classList.add('hidden');
+            } catch (err) {
+                showDialog('Gagal Mengunggah', 'Format gambar tidak didukung.', 'danger');
+            }
+        }
+
+        function setupDropzone() {
+            const dropzone = document.getElementById('dropzone');
+            ['dragenter', 'dragover'].forEach(name => {
+                dropzone.addEventListener(name, (e) => {
+                    e.preventDefault();
+                    dropzone.classList.add('border-cyan-400', 'bg-cyan-950/20');
+                });
+            });
+            ['dragleave', 'drop'].forEach(name => {
+                dropzone.addEventListener(name, (e) => {
+                    e.preventDefault();
+                    dropzone.classList.remove('border-cyan-400', 'bg-cyan-950/20');
+                });
+            });
+            dropzone.addEventListener('drop', (e) => {
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    document.getElementById('imageInput').files = files;
+                    handleImageSelect({ target: { files: files } });
+                }
+            });
+        }
+
+        function removeImage(e) {
+            e.stopPropagation();
+            currentCompressedImage = '';
+            document.getElementById('imageInput').value = '';
+            document.getElementById('imagePreviewContainer').classList.add('hidden');
+            document.getElementById('uploadPlaceholder').classList.remove('hidden');
+            document.getElementById('uploadPlaceholder').innerHTML = `
+                <i data-lucide="upload-cloud" class="w-8 h-8 text-cyan-400 mx-auto group-hover:scale-110 transition"></i>
+                <p class="font-medium text-slate-300">Upload Foto: pilih atau geser foto ke sini</p>
+                <p class="text-[10px] text-slate-500">Ukuran foto bebas (Otomatis dikompres & dioptimalkan)</p>
+            `;
+            lucide.createIcons();
+        }
+
+        // Drag & Drop Card Handling
+        function attachCardDrag(cardElement, postId) {
+            const handle = cardElement.querySelector('.card-handle');
+
+            const onPointerDown = (e) => {
+                if (e.target.closest('button')) return;
+
+                draggingCard = {
+                    element: cardElement,
+                    id: postId,
+                    startX: e.clientX || (e.touches && e.touches[0].clientX),
+                    startY: e.clientY || (e.touches && e.touches[0].clientY),
+                    initialLeft: parseInt(cardElement.style.left) || 0,
+                    initialTop: parseInt(cardElement.style.top) || 0
+                };
+
+                zIndexCounter++;
+                cardElement.style.zIndex = zIndexCounter;
+                const post = posts.find(p => p.id === postId);
+                if (post) {
+                    post.zIndex = zIndexCounter;
+                    savePostToDB(post);
+                }
+
+                document.addEventListener('mousemove', onPointerMove);
+                document.addEventListener('mouseup', onPointerUp);
+                document.addEventListener('touchmove', onPointerMove, { passive: false });
+                document.addEventListener('touchend', onPointerUp);
+            };
+
+            const onPointerMove = (e) => {
+                if (!draggingCard) return;
+                if (e.preventDefault) e.preventDefault();
+
+                const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+                const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+                const dx = clientX - draggingCard.startX;
+                const dy = clientY - draggingCard.startY;
+
+                const newX = Math.max(0, draggingCard.initialLeft + dx);
+                const newY = Math.max(0, draggingCard.initialTop + dy);
+
+                draggingCard.element.style.left = `${newX}px`;
+                draggingCard.element.style.top = `${newY}px`;
+            };
+
+            const onPointerUp = () => {
+                if (!draggingCard) return;
+
+                const post = posts.find(p => p.id === draggingCard.id);
+                if (post) {
+                    post.x = parseInt(draggingCard.element.style.left);
+                    post.y = parseInt(draggingCard.element.style.top);
+                    savePostToDB(post);
+                }
+
+                draggingCard = null;
+                document.removeEventListener('mousemove', onPointerMove);
+                document.removeEventListener('mouseup', onPointerUp);
+                document.removeEventListener('touchmove', onPointerMove);
+                document.removeEventListener('touchend', onPointerUp);
+            };
+
+            handle.addEventListener('mousedown', onPointerDown);
+            handle.addEventListener('touchstart', onPointerDown);
+        }
+
+        // Post Form Actions
+        function openPostModal(editId = null) {
+            const form = document.getElementById('postForm');
+            form.reset();
+            currentCompressedImage = '';
+            document.getElementById('imagePreviewContainer').classList.add('hidden');
+            document.getElementById('uploadPlaceholder').classList.remove('hidden');
+
+            if (editId) {
+                const post = posts.find(p => p.id === editId);
+                if (post) {
+                    document.getElementById('postId').value = post.id;
+                    document.getElementById('classInput').value = post.className;
+                    updateStudentDropdown(post.author);
+                    document.getElementById('descInput').value = post.desc;
+                    document.getElementById('modalTitle').innerHTML = `<i data-lucide="pencil" class="w-4 h-4 text-cyan-400"></i> Edit Laporan PJJ`;
+
+                    if (post.image) {
+                        currentCompressedImage = post.image;
+                        document.getElementById('imagePreview').src = post.image;
+                        document.getElementById('imagePreviewContainer').classList.remove('hidden');
+                        document.getElementById('uploadPlaceholder').classList.add('hidden');
+                    }
+
+                    const moodRadio = form.querySelector(`input[name="physicsMood"][value="${post.mood}"]`);
+                    if (moodRadio) moodRadio.checked = true;
+
+                    const badgeRadio = form.querySelector(`input[name="badge"][value="${post.badge}"]`);
+                    if (badgeRadio) badgeRadio.checked = true;
+                }
+            } else {
+                document.getElementById('postId').value = '';
+                document.getElementById('modalTitle').innerHTML = `<i data-lucide="flask-conical" class="w-4 h-4 text-cyan-400"></i> Upload Foto Kehadiran PJJ`;
+            }
+
+            if (!editId) updateStudentDropdown();
+            loadStudentRoster();
+            document.getElementById('postModal').classList.remove('hidden');
+            lucide.createIcons();
+        }
+
+        function closePostModal() {
+            document.getElementById('postModal').classList.add('hidden');
+        }
+
+        async function savePost(event) {
+            event.preventDefault();
+            const id = document.getElementById('postId').value || 'post-' + Date.now();
+            const author = document.getElementById('authorInput').value.trim();
+            const className = document.getElementById('classInput').value;
+            const desc = document.getElementById('descInput').value.trim();
+            const mood = document.querySelector('input[name="physicsMood"]:checked').value;
+            const badge = document.querySelector('input[name="badge"]:checked').value;
+
+            const existing = posts.find(p => p.id === id);
+
+            const randomTilt = (Math.random() * 4 - 2).toFixed(1);
+            const offset = (posts.length % 6) * 40;
+
+            const postData = {
+                id: id,
+                author: author,
+                className: className,
+                desc: desc,
+                mood: mood,
+                badge: badge,
+                image: currentCompressedImage,
+                volts: existing ? existing.volts : 0,
+                sparks: existing ? existing.sparks : 0,
+                forces: existing ? existing.forces : 0,
+                comments: existing ? existing.comments : [],
+                x: existing ? existing.x : 80 + offset,
+                y: existing ? existing.y : 80 + offset,
+                zIndex: existing ? existing.zIndex : ++zIndexCounter,
+                tilt: existing ? existing.tilt : randomTilt
+            };
+
+            await savePostToDB(postData);
+
+            const idx = posts.findIndex(p => p.id === id);
+            if (idx > -1) posts[idx] = postData;
+            else posts.push(postData);
+
+            renderCards();
+            closePostModal();
+        }
+
+        // Reaction Handler
+        async function addReaction(id, type) {
+            const post = posts.find(p => p.id === id);
+            if (post) {
+                post[type] = (post[type] || 0) + 1;
+                await savePostToDB(post);
+                renderCards();
+            }
+        }
+
+        // Comments System
+        let activeCommentId = null;
+        function openCommentModal(id) {
+            activeCommentId = id;
+            document.getElementById('commentPostId').value = id;
+            renderComments();
+            document.getElementById('commentModal').classList.remove('hidden');
+        }
+
+        function closeCommentModal() {
+            document.getElementById('commentModal').classList.add('hidden');
+            activeCommentId = null;
+        }
+
+        function renderComments() {
+            const post = posts.find(p => p.id === activeCommentId);
+            const list = document.getElementById('commentsList');
+            list.innerHTML = '';
+
+            if (!post || !post.comments || post.comments.length === 0) {
+                list.innerHTML = `<div class="text-center py-6 text-slate-500 text-xs">Belum ada komentar. Beri apresiasi pertama!</div>`;
+                return;
+            }
+
+            post.comments.forEach(c => {
+                const item = document.createElement('div');
+                item.className = 'bg-slate-900 p-2.5 rounded-lg border border-slate-800 space-y-1';
+                item.innerHTML = `
+                    <div class="flex justify-between items-center text-[10px]">
+                        <span class="font-bold text-cyan-300">${escapeHtml(c.author)}</span>
+                        <span class="text-slate-500">${new Date(c.time).toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}</span>
+                    </div>
+                    <p class="text-slate-300 text-xs">${escapeHtml(c.text)}</p>
+                `;
+                list.appendChild(item);
+            });
+        }
+
+        async function saveComment(e) {
+            e.preventDefault();
+            const id = document.getElementById('commentPostId').value;
+            const author = document.getElementById('commentAuthor').value.trim();
+            const text = document.getElementById('commentText').value.trim();
+
+            const post = posts.find(p => p.id === id);
+            if (post) {
+                if (!post.comments) post.comments = [];
+                post.comments.push({ author, text, time: new Date().toISOString() });
+                await savePostToDB(post);
+                document.getElementById('commentText').value = '';
+                renderComments();
+                renderCards();
+            }
+        }
+
+        // Help Modal & Lightbox Controls
+        function openGuideModal() { document.getElementById('guideModal').classList.remove('hidden'); }
+        function closeGuideModal() { document.getElementById('guideModal').classList.add('hidden'); }
+        function openLightbox(src) { document.getElementById('lightboxImg').src = src; document.getElementById('lightboxModal').classList.remove('hidden'); }
+        function closeLightbox() { document.getElementById('lightboxModal').classList.add('hidden'); }
+
+        // Search & Filter Handlers
+        function handleSearch(val) { searchQuery = val; renderCards(); }
+        function handleClassFilter(val) { selectedClassFilter = val; renderCards(); }
+        function toggleMenu() { document.getElementById('dropdownMenu').classList.toggle('hidden'); }
+
+        // Download Canvas as PNG
+        function downloadBoardPNG() {
+            toggleMenu();
+            const area = document.getElementById('cardsArea');
+            html2canvas(area, { backgroundColor: '#0b0f17', scale: 2 }).then(canvas => {
+                const a = document.createElement('a');
+                a.download = 'Papan-Kehadiran-PJJ-Fisika.png';
+                a.href = canvas.toDataURL('image/png');
+                a.click();
+            });
+        }
+
+        // Export/Import Data
+        function exportJSON() {
+            toggleMenu();
+            const str = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(posts, null, 2));
+            const a = document.createElement('a');
+            a.href = str;
+            a.download = `backup_fisika_pjj_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+        }
+
+        function importJSON(e) {
+            toggleMenu();
+            const file = e.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async (event) => {
+                try {
+                    const data = JSON.parse(event.target.result);
+                    if (Array.isArray(data)) {
+                        for (let p of data) await savePostToDB(p);
+                        await loadPostsFromDB();
+                        showDialog('Berhasil', 'Data eksperimen berhasil diimpor!', 'success');
+                    }
+                } catch (err) {
+                    showDialog('Gagal', 'Berkas JSON tidak valid.', 'danger');
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function confirmDeletePost(id) {
+            showDialog('Hapus Laporan', 'Apakah Anda yakin ingin menghapus laporan ini?', 'danger', async () => {
+                await deletePostFromDB(id);
+                posts = posts.filter(p => p.id !== id);
+                renderCards();
+            });
+        }
+
+        function confirmResetAll() {
+            toggleMenu();
+            showDialog('Kosongkan Papan', 'Semua laporan murid akan dihapus permanen. Lanjutkan?', 'danger', async () => {
+                const tx = db.transaction('posts', 'readwrite');
+                tx.objectStore('posts').clear();
+                posts = [];
+                renderCards();
+            });
+        }
+
+        // Custom Dialog Modal
+        function showDialog(title, message, type = 'info', onConfirm = null) {
+            const modal = document.getElementById('dialogModal');
+            document.getElementById('dialogTitle').innerText = title;
+            document.getElementById('dialogMessage').innerText = message;
+            
+            const btnContainer = document.getElementById('dialogButtons');
+            btnContainer.innerHTML = '';
+
+            if (onConfirm) {
+                btnContainer.innerHTML = `
+                    <button onclick="closeDialog()" class="px-4 py-1.5 text-xs text-slate-400 hover:bg-slate-800 rounded-lg">Batal</button>
+                    <button id="dialogConfirmBtn" class="px-4 py-1.5 text-xs bg-rose-600 hover:bg-rose-500 text-white font-semibold rounded-lg shadow">Ya, Lanjutkan</button>
+                `;
+                document.getElementById('dialogConfirmBtn').onclick = () => { onConfirm(); closeDialog(); };
+            } else {
+                btnContainer.innerHTML = `
+                    <button onclick="closeDialog()" class="px-4 py-1.5 text-xs bg-cyan-600 hover:bg-cyan-500 text-white font-semibold rounded-lg shadow">OK</button>
+                `;
+            }
+
+            modal.classList.remove('hidden');
+        }
+
+        function closeDialog() { document.getElementById('dialogModal').classList.add('hidden'); }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+    </script>
+</body>
+</html>
