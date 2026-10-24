@@ -222,7 +222,7 @@
         </div>
 
         <!-- Pannable / Infinite Canvas Board Area -->
-        <div id="cardsArea" class="relative w-[3400px] h-[2200px] min-h-full">
+        <div id="cardsArea" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 w-full max-w-7xl mx-auto p-4">
             <!-- Dynamic Cards Rendered Here -->
         </div>
     </main>
@@ -720,84 +720,84 @@ async function savePostToDB(post) {
             document.getElementById('postCounter').innerText = `${filtered.length} Laporan Eksperimen`;
 
             filtered.forEach(post => {
-                const moodObj = physicsMoods[post.mood || 'kinetik'];
-                const card = document.createElement('div');
-                card.id = `card-${post.id}`;
-                card.className = `lab-card absolute w-80 rounded-2xl p-4 text-xs flex flex-col space-y-3 cursor-grab active:cursor-grabbing select-none group`;
-                card.style.left = `${post.x || 50}px`;
-                card.style.top = `${post.y || 50}px`;
-                card.style.zIndex = post.zIndex || 1;
-                card.style.transform = `rotate(${post.tilt || 0}deg)`;
+    const moodObj = physicsMoods[post.mood || 'kinetik'];
+    const card = document.createElement('div');
+    card.id = `card-${post.id}`;
+    
+    // === 1. DIUBAH JADI RELATIVE & W-FULL (SESUAI GRID) ===
+    card.className = `lab-card relative w-full rounded-2xl p-4 text-xs flex flex-col space-y-3 select-none group cursor-default`;
+    card.style.zIndex = post.zIndex || 1;
+    // (Garis style.left, style.top, dan style.transform SUDAH DIHAPUS)
 
-                card.innerHTML = `
-                    <div class="sticky-tape"></div>
+    card.innerHTML = `
+        <div class="sticky-tape"></div>
 
-                    <!-- Header -->
-                    <div class="card-handle flex justify-between items-start pt-1">
-                        <div>
-                            <div class="flex items-center gap-1.5">
-                                <h3 class="font-extrabold text-slate-100 text-sm tracking-wide">${escapeHtml(post.author)}</h3>
-                            </div>
-                            <div class="flex items-center gap-1.5 mt-1">
-                                <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-cyan-300 border border-slate-700">
-                                    ${escapeHtml(post.className)}
-                                </span>
-                                <span class="px-2 py-0.5 rounded text-[10px] font-medium border ${moodObj.class}">
-                                    ${moodObj.label}
-                                </span>
-                            </div>
-                        </div>
-                        <div class="flex items-center gap-1 opacity-70 group-hover:opacity-100 transition">
-                            <button onclick="openPostModal('${post.id}')" class="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-cyan-400">
-                                <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
-                            </button>
-                            <button onclick="confirmDeletePost('${post.id}')" class="p-1 hover:bg-rose-900/50 rounded text-slate-400 hover:text-rose-400">
-                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                            </button>
-                        </div>
-                    </div>
+        <!-- Header -->
+        <div class="card-handle flex justify-between items-start pt-1">
+            <div>
+                <div class="flex items-center gap-1.5">
+                    <h3 class="font-extrabold text-slate-100 text-sm tracking-wide">${escapeHtml(post.author)}</h3>
+                </div>
+                <div class="flex items-center gap-1.5 mt-1">
+                    <span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-cyan-300 border border-slate-700">
+                        ${escapeHtml(post.className)}
+                    </span>
+                    <span class="px-2 py-0.5 rounded text-[10px] font-medium border ${moodObj.class}">
+                        ${moodObj.label}
+                    </span>
+                </div>
+            </div>
+            <div class="flex items-center gap-1 opacity-70 group-hover:opacity-100 transition">
+                <button onclick="openPostModal('${post.id}')" class="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-cyan-400">
+                    <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                </button>
+                <button onclick="confirmDeletePost('${post.id}')" class="p-1 hover:bg-rose-900/50 rounded text-slate-400 hover:text-rose-400">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                </button>
+            </div>
+        </div>
 
-                    <!-- Image Section -->
-                    ${post.image ? `
-                        <div class="relative overflow-hidden rounded-xl bg-slate-950 border border-slate-800 group/img">
-                            <img src="${post.image}" alt="Laporan Foto" class="w-full h-48 object-cover rounded-xl transition duration-300 group-hover/img:scale-105">
-                            <button onclick="openLightbox('${post.image}')" class="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 flex items-center justify-center text-white transition">
-                                <i data-lucide="maximize-2" class="w-6 h-6 text-cyan-400"></i>
-                            </button>
-                            <span class="absolute bottom-2 right-2 bg-slate-900/80 backdrop-blur-sm border border-slate-700 text-slate-300 px-2 py-0.5 rounded-full text-[10px] font-code">
-                                ${post.badge || '⚛️ Fisika'}
-                            </span>
-                        </div>
-                    ` : ''}
+        <!-- Image Section -->
+        ${post.image ? `
+            <div class="relative overflow-hidden rounded-xl bg-slate-950 border border-slate-800 group/img">
+                <img src="${post.image}" alt="Laporan Foto" class="w-full h-48 object-cover rounded-xl transition duration-300 group-hover/img:scale-105">
+                <button onclick="openLightbox('${post.image}')" class="absolute inset-0 bg-black/40 opacity-0 group-hover/img:opacity-100 flex items-center justify-center text-white transition">
+                    <i data-lucide="maximize-2" class="w-6 h-6 text-cyan-400"></i>
+                </button>
+                <span class="absolute bottom-2 right-2 bg-slate-900/80 backdrop-blur-sm border border-slate-700 text-slate-300 px-2 py-0.5 rounded-full text-[10px] font-code">
+                    ${post.badge || '⚛️ Fisika'}
+                </span>
+            </div>
+        ` : ''}
 
-                    <!-- Experiment Notes -->
-                    <p class="text-slate-300 leading-relaxed font-chalk text-base break-words">
-                        "${escapeHtml(post.desc)}"
-                    </p>
+        <!-- Experiment Notes -->
+        <p class="text-slate-300 leading-relaxed font-chalk text-base break-words">
+            "${escapeHtml(post.desc)}"
+        </p>
 
-                    <!-- Interactive Reactions Bar -->
-                    <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
-                        <div class="flex items-center gap-2">
-                            <button onclick="addReaction('${post.id}', 'volts')" class="flex items-center gap-1 hover:text-yellow-400 transition bg-slate-900 px-2 py-1 rounded-lg border border-slate-800">
-                                <span>⚡</span> <span class="font-bold text-slate-200">${post.volts || 0}</span>
-                            </button>
-                            <button onclick="addReaction('${post.id}', 'sparks')" class="flex items-center gap-1 hover:text-cyan-400 transition bg-slate-900 px-2 py-1 rounded-lg border border-slate-800">
-                                <span>⚛️</span> <span class="font-bold text-slate-200">${post.sparks || 0}</span>
-                            </button>
-                            <button onclick="addReaction('${post.id}', 'forces')" class="flex items-center gap-1 hover:text-purple-400 transition bg-slate-900 px-2 py-1 rounded-lg border border-slate-800">
-                                <span>💪</span> <span class="font-bold text-slate-200">${post.forces || 0}</span>
-                            </button>
-                        </div>
-                        <button onclick="openCommentModal('${post.id}')" class="flex items-center gap-1 hover:text-cyan-400 transition bg-slate-900 px-2 py-1 rounded-lg border border-slate-800">
-                            <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
-                            <span>${(post.comments || []).length}</span>
-                        </button>
-                    </div>
-                `;
+        <!-- Interactive Reactions Bar -->
+        <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between text-[11px] text-slate-400">
+            <div class="flex items-center gap-2">
+                <button onclick="addReaction('${post.id}', 'volts')" class="flex items-center gap-1 hover:text-yellow-400 transition bg-slate-900 px-2 py-1 rounded-lg border border-slate-800">
+                    <span>⚡</span> <span class="font-bold text-slate-200">${post.volts || 0}</span>
+                </button>
+                <button onclick="addReaction('${post.id}', 'sparks')" class="flex items-center gap-1 hover:text-cyan-400 transition bg-slate-900 px-2 py-1 rounded-lg border border-slate-800">
+                    <span>⚛️</span> <span class="font-bold text-slate-200">${post.sparks || 0}</span>
+                </button>
+                <button onclick="addReaction('${post.id}', 'forces')" class="flex items-center gap-1 hover:text-purple-400 transition bg-slate-900 px-2 py-1 rounded-lg border border-slate-800">
+                    <span>💪</span> <span class="font-bold text-slate-200">${post.forces || 0}</span>
+                </button>
+            </div>
+            <button onclick="openCommentModal('${post.id}')" class="flex items-center gap-1 hover:text-cyan-400 transition bg-slate-900 px-2 py-1 rounded-lg border border-slate-800">
+                <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
+                <span>${(post.comments || []).length}</span>
+            </button>
+        </div>
+    `;
 
-                attachCardDrag(card, post.id);
-                container.appendChild(card);
-            });
+    // === 2. BARIS attachCardDrag(card, post.id); SUDAH DIHAPUS ===
+    container.appendChild(card);
+});
 
             lucide.createIcons();
         }
